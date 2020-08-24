@@ -1,0 +1,10 @@
+set pm3d map
+set xlabel font ",16"
+set ylabel font ",16"
+set title font ",20"
+
+set xlabel "R {/Symbol f} [km]"
+set ylabel "R {/Symbol q} [km]"
+set title "Electron Density with noise ({/Symbol f} - {/Symbol q}, Alt=75)"
+
+splot "noiseNh_th_phi.dat" with pm3d
