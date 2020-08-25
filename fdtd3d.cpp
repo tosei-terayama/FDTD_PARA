@@ -67,10 +67,17 @@ const double Azim{61.0*M_PI/180.0};
 
 int main(int argc, char** argv)
 {
-
   MPI::Init(argc, argv);
   const int rank = MPI::COMM_WORLD.Get_rank();
   const int size = MPI::COMM_WORLD.Get_size();
+
+  const int band = Nphi/size;
+  const int modQ = Nphi%size;
+
+  if(rank == 0){
+    std::cout << size << " " << band << " " << modQ << std::endl;
+    std::exit(0);
+  }
 
   int time_step = 2000;
   double t;
