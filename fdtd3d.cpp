@@ -11,7 +11,7 @@
 #include "geocoordinate.h"
 #include "perturbation.h"
 #include "date.h"
-//#include <mpi.h>
+#include <mpi.h>
 
 const int Nr{100};
 const int Ntheta{100};
