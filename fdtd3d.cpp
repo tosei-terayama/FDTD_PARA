@@ -71,11 +71,15 @@ int main(int argc, char** argv)
   const int rank = MPI::COMM_WORLD.Get_rank();
   const int size = MPI::COMM_WORLD.Get_size();
 
-  const int band = Nphi/size;
-  const int modQ = Nphi%size;
+  const int band1 = Nphi/size;
+  const int modQ1 = Nphi%size;
+
+  const int band2 = (Nphi + 1)/size;
+  const int modQ2 = (Nphi + 1)%size;
 
   if(rank == 0){
-    std::cout << size << " " << band << " " << modQ << std::endl;
+    std::cout << size << " " << band1 << " " << modQ1 << std::endl;
+    std::cout << band2 << " " << modQ2 << std::endl;
     std::exit(0);
   }
 
@@ -165,8 +169,6 @@ int main(int argc, char** argv)
   B_th = std::acos(-sph_B[1]/B_abs);
   B_phi = std::atan2(sph_B[2], sph_B[0]);
 
-  std::cout << "B_theta = " << B_th << "\tB_phi = " << B_phi << std::endl;
-
   // Geo class //
   geocoordinate lla_info;
   lla_info.set_point(32.0, 135.0, 60.0);
@@ -249,10 +251,12 @@ int main(int argc, char** argv)
   ofs_receive << 0 << " " << Etheta[0][i_r][j_r][k_r] << std::endl;
   ofs_serve << 0 << " " << Etheta[0][i_s][j_s][k_s] << std::endl;
 
-  std::cout << "R : " << dist(Nr) << " θ : " << R0*delta_theta*Ntheta << " φ : " << R0*ph(Nphi) << std::endl;
-  std::cout << "time_step : " << time_step << " Dt : " << Dt << std::endl << std::endl;
-  std::cout << "Perturbation r0 : " << P_info.r0() << " th0 : " << P_info.th0() << " phi0 : " << P_info.phi0() << std::endl;
-  std::cout << "_______________________________________" << std::endl;
+  if(rank == 0){
+    std::cout << "R : " << dist(Nr) << " θ : " << R0*delta_theta*Ntheta << " φ : " << R0*ph(Nphi) << std::endl;
+    std::cout << "Time Step : " << time_step << " Dt : " << Dt << std::endl << std::endl;
+    std::cout << "Perturbation r0 : " << P_info.r0() << " th0 : " << P_info.th0() << " phi0 : " << P_info.phi0() << std::endl;
+    std::cout << "_________________________________________" << std::endl;
+  }
 
   ////主経路電波強度観測/////
   int Num_obs = (Nphi - 2*L) - k_s;
@@ -297,14 +301,10 @@ int main(int argc, char** argv)
     //Forced current//
     J = -((t - t0)/sigma_t/sigma_t/delta_r/(dist(i_s + 0.5)*delta_theta)/(dist(i_s + 0.5)*delta_phi))
       *std::exp(-std::pow(t - t0, 2.0)/2.0/std::pow(sigma_t, 2.0));
-
-    std::cout << " J = " << J << std::endl;
     
     ofs_j << t << " " << J << std::endl;
 
     Etheta[OLD][i_s][j_s][k_s] = Etheta[OLD][i_s][j_s][k_s] + J;
-    
-    std::cout << "E[1][50][20] = " << Er[NEW][1][50][20] << std::endl;
 
     /////   D, E update   /////
     //outside PML//
@@ -365,9 +365,8 @@ int main(int argc, char** argv)
         E_famp3d[j][k] += Er[NEW][obs_p3d[j][k].i()][obs_p3d[j][k].j()][obs_p3d[j][k].k()]*std::exp(-zj*omega*t)*Dt;
       }
     }
-    
-    std::cout << n << " / " << time_step << std::endl << std::endl;
-    
+
+    if(rank == 0) std::cout << "\r" << n << " / " << time_step;
   }
   
   std::chrono::system_clock::time_point end
@@ -377,7 +376,7 @@ int main(int argc, char** argv)
   total_time = std::chrono::duration_cast <std::chrono::milliseconds>
     (end - start).count();
   
-  std::cout << "elapsed_time = " << total_time*1.0e-3 << " [sec]"<< std::endl;
+  if(rank == 0) std::cout << "elapsed_time = " << total_time*1.0e-3 << " [sec]"<< std::endl;
 
   for(int k = 0; k < Num_obs; k++){
     Magnitude[k] = 20.0*std::log10(std::abs(E_famp[k]/E_famp[0]));
@@ -393,6 +392,8 @@ int main(int argc, char** argv)
     ofs_servedNphi << std::endl;
     ofs_servedNphidB << std::endl;
   }
+
+  MPI::Finalize();
 
   ofs_1.close();
   ofs_receive.close();
